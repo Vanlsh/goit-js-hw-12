@@ -4,7 +4,7 @@ import SimpleLightbox from 'simplelightbox';
 import 'izitoast/dist/css/iziToast.min.css';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
-const API_URL = 'https://pixabay.com/ap';
+const API_URL = 'https://pixabay.com/api';
 const AUTH_TOKEN = '41411708-a2ea7fc9ae3454ee0834f0813';
 const CLASS_HIDDEN = 'hidden';
 axios.defaults.baseURL = API_URL;
