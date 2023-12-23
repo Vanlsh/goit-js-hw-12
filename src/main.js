@@ -1,9 +1,13 @@
+import axios from 'axios';
 import iziToast from 'izitoast';
 import SimpleLightbox from 'simplelightbox';
 import 'izitoast/dist/css/iziToast.min.css';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
-const API_URL = 'https://pixabay.com/api/';
+const API_URL = 'https://pixabay.com/ap';
+const AUTH_TOKEN = '41411708-a2ea7fc9ae3454ee0834f0813';
+const CLASS_HIDDEN = 'hidden';
+axios.defaults.baseURL = API_URL;
 
 const alertError = {
   message:
@@ -18,11 +22,11 @@ const alertError = {
   iconColor: '#fff',
 };
 const paramsOptions = {
-  key: '41411708-a2ea7fc9ae3454ee0834f0813',
+  key: AUTH_TOKEN,
   image_type: 'photo',
   orientation: 'horizontal',
   safesearch: true,
-  per_page: 9,
+  per_page: 20,
 };
 
 const findPhotoForm = document.querySelector('.form');
@@ -31,6 +35,7 @@ const loader = document.querySelector('.loader');
 const showMoreButton = document.querySelector('#show-more');
 
 let loadedPage = 1,
+  totalHits = 1,
   searchQuery = '';
 
 const lightbox = new SimpleLightbox('.gallery a', {
@@ -38,19 +43,6 @@ const lightbox = new SimpleLightbox('.gallery a', {
   captionsData: 'alt',
   captionDelay: 250,
 });
-
-const fetchPhoto = (value, page) => {
-  const searchParams = new URLSearchParams({
-    ...paramsOptions,
-    q: value,
-    page,
-  });
-  return fetch(`${API_URL}?${searchParams}`).then(response => {
-    console.log(response);
-    if (!response.ok) throw new Error(response.status);
-    return response.json();
-  });
-};
 
 const addPhotos = photos => {
   galleryList.insertAdjacentHTML(
@@ -68,46 +60,81 @@ const addPhotos = photos => {
   lightbox.refresh();
 };
 
-const handleSearchSubmit = event => {
+const galleryScroll = (page, itemsInPage) => {
+  const indexOfItem = itemsInPage * (page - 1);
+  const galleryItemPosition =
+    galleryList.children[indexOfItem].getBoundingClientRect();
+  window.scrollBy({
+    top: galleryItemPosition.y,
+    left: 0,
+    behavior: 'smooth',
+  });
+};
+
+const fetchPhotos = async (value, page) => {
+  const response = await axios.get('/', {
+    params: { ...paramsOptions, q: value, page },
+  });
+  return response.data;
+};
+
+const handleSearchSubmit = async event => {
   event.preventDefault();
   const searchText = event.target.elements.search.value.trim();
   event.target.elements.search.value = '';
 
-  showMoreButton.classList.add('hidden');
-  loader.classList.remove('hidden');
+  showMoreButton.classList.add(CLASS_HIDDEN);
+  loader.classList.remove(CLASS_HIDDEN);
   galleryList.innerHTML = '';
   loadedPage = 1;
 
-  fetchPhoto(searchText, loadedPage)
-    .then(response => {
-      const photos = response.hits;
-      if (photos.length) {
-        addPhotos(photos);
-        showMoreButton.classList.remove('hidden');
-        loadedPage++;
-        searchQuery = searchText;
-      } else {
-        iziToast.show(alertError);
-      }
-    })
-    .catch(error => iziToast.show({ ...alertError, message: error }))
-    .finally(() => loader.classList.add('hidden'));
+  try {
+    const photos = await fetchPhotos(searchText, loadedPage);
+
+    if (!photos.totalHits) {
+      iziToast.show(alertError);
+      return;
+    }
+
+    addPhotos(photos.hits);
+    loadedPage++;
+    searchQuery = searchText;
+    totalHits = Math.ceil(photos.totalHits / paramsOptions.per_page);
+
+    showMoreButton.classList.remove(CLASS_HIDDEN);
+  } catch (error) {
+    iziToast.show({ ...alertError, message: error.message });
+  } finally {
+    loader.classList.add(CLASS_HIDDEN);
+  }
 };
 
-const handleSearchMore = () => {
-  loader.classList.remove('hidden');
-  showMoreButton.classList.add('hidden');
-
-  fetchPhoto(searchQuery, loadedPage)
-    .then(photos => {
-      addPhotos(photos.hits);
-      loadedPage++;
-    })
-    .catch(() => iziToast.show(alertError))
-    .finally(() => {
-      loader.classList.add('hidden');
-      showMoreButton.classList.remove('hidden');
+const handleSearchMore = async () => {
+  if (totalHits < loadedPage) {
+    iziToast.show({
+      ...alertError,
+      message: "We're sorry, but you've reached the end of search results.",
     });
+    showMoreButton.classList.add(CLASS_HIDDEN);
+    return;
+  }
+
+  loader.classList.remove(CLASS_HIDDEN);
+  showMoreButton.classList.add(CLASS_HIDDEN);
+
+  try {
+    const photos = await fetchPhotos(searchQuery, loadedPage);
+
+    addPhotos(photos.hits);
+    galleryScroll(loadedPage, paramsOptions.per_page);
+
+    loadedPage++;
+  } catch (error) {
+    iziToast.show({ ...alertError, message: error.message });
+  } finally {
+    loader.classList.add(CLASS_HIDDEN);
+    showMoreButton.classList.remove(CLASS_HIDDEN);
+  }
 };
 
 findPhotoForm.addEventListener('submit', handleSearchSubmit);
