@@ -21,6 +21,7 @@ const alertError = {
   messageColor: '#fff',
   iconColor: '#fff',
 };
+
 const paramsOptions = {
   key: AUTH_TOKEN,
   image_type: 'photo',
@@ -85,6 +86,7 @@ const handleSearchSubmit = async event => {
 
   showMoreButton.classList.add(CLASS_HIDDEN);
   loader.classList.remove(CLASS_HIDDEN);
+
   galleryList.innerHTML = '';
   loadedPage = 1;
 
@@ -101,7 +103,12 @@ const handleSearchSubmit = async event => {
     searchQuery = searchText;
     totalHits = Math.ceil(photos.totalHits / paramsOptions.per_page);
 
-    showMoreButton.classList.remove(CLASS_HIDDEN);
+    if (totalHits > 1) showMoreButton.classList.remove(CLASS_HIDDEN);
+    else
+      iziToast.show({
+        ...alertError,
+        message: "We're sorry, but you've reached the end of search results.",
+      });
   } catch (error) {
     iziToast.show({ ...alertError, message: error.message });
   } finally {
@@ -110,15 +117,6 @@ const handleSearchSubmit = async event => {
 };
 
 const handleSearchMore = async () => {
-  if (totalHits < loadedPage) {
-    iziToast.show({
-      ...alertError,
-      message: "We're sorry, but you've reached the end of search results.",
-    });
-    showMoreButton.classList.add(CLASS_HIDDEN);
-    return;
-  }
-
   loader.classList.remove(CLASS_HIDDEN);
   showMoreButton.classList.add(CLASS_HIDDEN);
 
@@ -132,8 +130,13 @@ const handleSearchMore = async () => {
   } catch (error) {
     iziToast.show({ ...alertError, message: error.message });
   } finally {
+    if (totalHits >= loadedPage) showMoreButton.classList.add(CLASS_HIDDEN);
+    else
+      iziToast.show({
+        ...alertError,
+        message: "We're sorry, but you've reached the end of search results.",
+      });
     loader.classList.add(CLASS_HIDDEN);
-    showMoreButton.classList.remove(CLASS_HIDDEN);
   }
 };
 
