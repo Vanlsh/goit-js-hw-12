@@ -12,7 +12,7 @@ axios.defaults.baseURL = API_URL;
 const alertError = {
   message:
     'Sorry, there are no images matching your search query. Please try again!',
-  color: '#EF4040',
+  color: '#FFA000',
   position: 'topRight',
   icon: 'icon-octagon',
   iconText: '',
@@ -110,7 +110,7 @@ const handleSearchSubmit = async event => {
         message: "We're sorry, but you've reached the end of search results.",
       });
   } catch (error) {
-    iziToast.show({ ...alertError, message: error.message });
+    iziToast.show({ ...alertError, message: error.message, color: '#EF4040' });
   } finally {
     loader.classList.add(CLASS_HIDDEN);
   }
